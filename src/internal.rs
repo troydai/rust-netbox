@@ -1,25 +1,21 @@
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 
-struct Worker {
+pub struct Worker<'a> {
     id: i32,
-    stream: &mut TcpStream,
+    stream: &'a mut TcpStream,
+    addr: SocketAddr,
 }
 
-impl Worker {
-    fn new(id: i32, stream: &mut TcpStream, addr: SocketAddr) -> Worker {
-        Worker {
-            id: id,
-            stream: stream,
-        }
+impl<'a> Worker<'a> {
+    pub fn new(id: i32, stream: &mut TcpStream, addr: SocketAddr) -> Worker {
+        Worker { id, stream, addr }
     }
 
-    fn handle(self: &Worker) {
-        let resp = format!(
-            "Worker {} accept connection from {}",
-            self.worker_id, self.addr
-        );
+    pub fn handle(&mut self) {
+        let resp = format!("Worker {} accept connection from {}", self.id, self.addr);
 
-        match stream.write(resp.as_bytes()) {
+        match self.stream.write(resp.as_bytes()) {
             Ok(_) => {}
             Err(e) => {
                 println!("Failed to write to stream: {}", e);
@@ -29,22 +25,22 @@ impl Worker {
 
         let mut buf = [0u8; 1024];
         loop {
-            match stream.read(&mut buf) {
+            match self.stream.read(&mut buf) {
                 Ok(n) => {
                     if n == 0 {
-                        println!("[{}] Connection closed", worker_id);
+                        println!("[{}] Connection closed", self.id);
                         return;
                     }
 
                     let data = &buf[..n];
                     print!(
                         "[{}] Received data: {}",
-                        worker_id,
+                        self.id,
                         String::from_utf8_lossy(data)
                     );
                 }
                 Err(e) => {
-                    println!("[{}] Failed to read from stream: {}", worker_id, e);
+                    println!("[{}] Failed to read from stream: {}", self.id, e);
                     return;
                 }
             }
