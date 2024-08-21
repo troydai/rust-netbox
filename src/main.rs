@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-mod internal;
+mod actors;
 
 fn main() -> std::io::Result<()> {
     let lis = TcpListener::bind("127.0.0.1:3000")?;
@@ -9,7 +9,7 @@ fn main() -> std::io::Result<()> {
     loop {
         match lis.accept() {
             Ok((mut socket, addr)) => {
-                let mut _worker = internal::Worker::new(worker_id, &mut socket, addr);
+                let mut _worker = actors::Worker::new(worker_id, &mut socket, addr);
                 _worker.handle();
             }
             Err(e) => {
