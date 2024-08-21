@@ -1,9 +1,14 @@
+use std::env;
 use std::net::TcpListener;
 
 mod actors;
+mod utils;
 
 fn main() -> std::io::Result<()> {
-    let lis = TcpListener::bind("127.0.0.1:3000")?;
+    let args = env::args().collect();
+    let port = utils::get_port(&args);
+
+    let lis = TcpListener::bind(format!("127.0.0.1:{}", port))?;
 
     let mut worker_id = 0;
     loop {
@@ -19,3 +24,4 @@ fn main() -> std::io::Result<()> {
         worker_id += 1;
     }
 }
+
