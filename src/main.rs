@@ -8,7 +8,10 @@ fn main() -> std::io::Result<()> {
     let args = env::args().collect();
     let port = utils::get_port(&args);
 
-    let lis = TcpListener::bind(format!("127.0.0.1:{}", port))?;
+    let addr = format!("127.0.0.1:{}", port);
+    println!("Server started at {}", addr);
+
+    let lis = TcpListener::bind(addr)?;
 
     let mut worker_id = 0;
     loop {
@@ -24,4 +27,3 @@ fn main() -> std::io::Result<()> {
         worker_id += 1;
     }
 }
-

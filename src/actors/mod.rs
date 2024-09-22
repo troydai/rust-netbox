@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 
+// Worker handls a single connection
 pub struct Worker<'a> {
     id: i32,
     stream: &'a mut TcpStream,
@@ -8,12 +9,14 @@ pub struct Worker<'a> {
 }
 
 impl<'a> Worker<'a> {
+    // Create a new Worker instance with an id, TcpStream, and SocketAddr
     pub fn new(id: i32, stream: &mut TcpStream, addr: SocketAddr) -> Worker {
         Worker { id, stream, addr }
     }
 
+    // handle instructs the worker to start handling the given tcp stream
     pub fn handle(&mut self) {
-        let resp = format!("Worker {} accept connection from {}", self.id, self.addr);
+        let resp = format!("Worker {} accept connection from {}\n", self.id, self.addr);
 
         match self.stream.write(resp.as_bytes()) {
             Ok(_) => {}
@@ -34,7 +37,7 @@ impl<'a> Worker<'a> {
 
                     let data = &buf[..n];
                     print!(
-                        "[{}] Received data: {}",
+                        "[{}] Received data: \"{}\"",
                         self.id,
                         String::from_utf8_lossy(data)
                     );
