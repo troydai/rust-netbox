@@ -35,9 +35,9 @@ impl<'a> Worker<'a> {
                         return;
                     }
 
-                    let data = &buf[..n];
+                    let data = trim_return(&buf[..n]);
                     print!(
-                        "[{}] Received data: \"{}\"",
+                        "[{}] Received data: \"{}\"\n",
                         self.id,
                         String::from_utf8_lossy(data)
                     );
@@ -49,4 +49,14 @@ impl<'a> Worker<'a> {
             }
         }
     }
+}
+
+fn trim_return(data: &[u8]) -> &[u8] {
+    if data.ends_with(&[b'\r', b'\n']) {
+        return &data[..data.len() - 2]
+    } else if data.ends_with(&[b'\n']) {
+        return &data[..data.len() - 1]
+    }
+
+    data
 }
