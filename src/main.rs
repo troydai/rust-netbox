@@ -17,8 +17,10 @@ fn main() -> std::io::Result<()> {
     loop {
         match lis.accept() {
             Ok((mut socket, addr)) => {
-                let mut _worker = actors::Worker::new(worker_id, &mut socket, addr);
-                _worker.handle();
+                std::thread::spawn(move || {
+                    let mut _worker = actors::Worker::new(worker_id, &mut socket, addr);
+                    _worker.handle();
+                });
             }
             Err(e) => {
                 println!("Failed to accept connection: {}", e)

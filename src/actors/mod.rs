@@ -51,6 +51,12 @@ impl<'a> Worker<'a> {
     }
 }
 
+impl Drop for Worker<'_> {
+    fn drop(&mut self) {
+        println!("[{}] Worker dropped", self.id);
+    }
+}
+
 fn trim_return(data: &[u8]) -> &[u8] {
     if data.ends_with(&[b'\r', b'\n']) {
         return &data[..data.len() - 2]
