@@ -1,57 +1,76 @@
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::io::Read;
+use std::net::TcpStream;
+use std::sync::{RwLock, Arc};
+use std::thread::spawn;
 
 // Worker handls a single connection
-pub struct Worker<'a> {
+pub struct Worker {
     id: i32,
-    stream: &'a mut TcpStream,
-    addr: SocketAddr,
+    state_lock: Arc::<RwLock<bool>>,    // ready vs busy
 }
 
-impl<'a> Worker<'a> {
+impl<'a> Worker {
     // Create a new Worker instance with an id, TcpStream, and SocketAddr
-    pub fn new(id: i32, stream: &mut TcpStream, addr: SocketAddr) -> Worker {
-        Worker { id, stream, addr }
+    pub fn new(id: i32) -> Worker {
+        Worker {
+            id,
+            state_lock: Arc::new(RwLock::new(true)),
+        }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        match self.state_lock.try_read() {
+            Ok(state) => *state,
+            Err(_) => false,
+        }
     }
 
     // handle instructs the worker to start handling the given tcp stream
-    pub fn handle(&mut self) {
-        let resp = format!("Worker {} accept connection from {}\n", self.id, self.addr);
-
-        match self.stream.write(resp.as_bytes()) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Failed to write to stream: {}", e);
-                return;
-            }
+    pub fn handle(&mut self, mut socket: TcpStream) {
+        let state = self.state_lock.clone();
+        match state.write() {
+            Ok(mut state) => { *state = false; }
+            Err(_) => { print!("[{}] Failed to set worker state to busy\n", self.id); }
         }
 
-        let mut buf = [0u8; 1024];
-        loop {
-            match self.stream.read(&mut buf) {
-                Ok(n) => {
-                    if n == 0 {
-                        println!("[{}] Connection closed", self.id);
-                        return;
+        let id = self.id;
+        spawn(move || {
+            let mut buf = [0u8; 1024];
+            loop {
+                match socket.read(&mut buf) {
+                    Ok(n) => {
+                        if n == 0 {
+                            println!("[{}] Connection closed", id);
+                            break;
+                        }
+    
+                        let data = trim_return(&buf[..n]);
+                        print!(
+                            "[{}] Received data: \"{}\"\n",
+                            id,
+                            String::from_utf8_lossy(data)
+                        );
                     }
-
-                    let data = trim_return(&buf[..n]);
-                    print!(
-                        "[{}] Received data: \"{}\"\n",
-                        self.id,
-                        String::from_utf8_lossy(data)
-                    );
-                }
-                Err(e) => {
-                    println!("[{}] Failed to read from stream: {}", self.id, e);
-                    return;
+                    Err(e) => {
+                        println!("[{}] Failed to read from stream: {}", id, e);
+                        break;
+                    }
                 }
             }
-        }
+            match state.write() {
+                Ok(mut state) => {
+                    *state = true;
+                }
+                Err(_) => {
+                    print!("[{}] Failed to set worker state to ready\n", id);
+                }
+            }
+        });
+
     }
 }
 
-impl Drop for Worker<'_> {
+impl Drop for Worker {
     fn drop(&mut self) {
         println!("[{}] Worker dropped", self.id);
     }
